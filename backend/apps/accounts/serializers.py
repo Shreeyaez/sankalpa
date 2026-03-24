@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import Account
-from .constants import UserRoles
+# from .constants import UserRoles
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -9,7 +9,7 @@ class AccountSerializer(serializers.ModelSerializer):
     Serializer for Account model.
     Used for returning user data after login/register.
     """
-    role = serializers.SerializerMethodField()
+    # role = serializers.SerializerMethodField()
     
     class Meta:
         model = Account
@@ -24,21 +24,21 @@ class AccountSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at"]
 
-    def get_role(self, obj):
-        """
-        Return specific role based on related profiles.
-        Checks for engineer, chairperson, or financeperson profiles.
-        """
-        if hasattr(obj, "engineer_profile"):
-            return UserRoles.ENGINEER.value
-        if hasattr(obj, "chairperson_profile"):
-            return UserRoles.CHAIRPERSON.value
-        if hasattr(obj, "financeperson_profile"):
-            return UserRoles.FINANCE.value
-        # Convert database role to display format
-        if obj.role == "ADMIN":
-            return UserRoles.ADMIN.value
-        return UserRoles.USER.value
+    # def get_role(self, obj):
+    #     """
+    #     Return specific role based on related profiles.
+    #     Checks for engineer, chairperson, or financeperson profiles.
+    #     """
+    #     if hasattr(obj, "engineer_profile"):
+    #         return UserRoles.ENGINEER.value
+    #     if hasattr(obj, "chairperson_profile"):
+    #         return UserRoles.CHAIRPERSON.value
+    #     if hasattr(obj, "financeperson_profile"):
+    #         return UserRoles.FINANCE.value
+    #     # Convert database role to display format
+    #     if obj.role == "ADMIN":
+    #         return UserRoles.ADMIN.value
+    #     return UserRoles.USER.value
 
 
 class RegisterSerializer(serializers.ModelSerializer):

@@ -15,6 +15,7 @@ import Topbar from "./components/Topbar";
 
 import Login from "./auth/Login";
 import RequireAuth from "./auth/RequireAuth";
+// import { getAllUserRoles } from "./constants/userRoles";
 
 import Dashboard from "./pages/Dashboard";
 
@@ -85,7 +86,7 @@ export default function App() {
           <Route
             path="/app"
             element={
-              <RequireAuth allowedRoles={["ADMIN", "USER"]}>
+              // <RequireAuth allowedRoles={getAllUserRoles()}>
                 <AppLayout />
               </RequireAuth>
             }
