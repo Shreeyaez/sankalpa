@@ -6,9 +6,11 @@ import {
   AlertTriangle, CheckCircle, Activity, Clock, XCircle,
   ArrowRight, Building2, RefreshCw, Hourglass,
   Plus, CalendarClock, TrendingUp, Layers, Target, Wallet,
-  FolderOpen, ChevronLeft, ChevronRight,
+  FolderOpen, ChevronLeft, ChevronRight
 } from "lucide-react";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
+import FinanceDashboard from "./FinanceDashboard";
 
 const TOTAL_WARD_BUDGET = 45_000_000;
 
@@ -295,6 +297,7 @@ function HealthBar({ label, val, total, color, textColor }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [projects,     setProjects]     = useState([]);
   const [milestones,   setMilestones]   = useState([]);
   const [measurements, setMeasurements] = useState([]);
@@ -305,6 +308,9 @@ export default function Dashboard() {
   const [lastUpdated,  setLastUpdated]  = useState(null);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [alertIdx,     setAlertIdx]     = useState(0);
+
+  // TODO: use enums here i.e. USER_ROLES.FINANCE : @shreeya 
+  const isFinanceUser = user?.role === 'Finance';
 
   const STATUS_META = {
     ONGOING:     { label: t("project.status.ongoing"),     dot:"bg-blue-500",    text:"text-blue-700",    bg:"bg-blue-50"    },
@@ -396,6 +402,40 @@ export default function Dashboard() {
 
   const filtered = statusFilter==="ALL" ? projects : projects.filter(p=>p.status===statusFilter);
 
+  // TODO: fix the messy conditional rendering here and also utilize the essential data only - needs refactor. @shreeya
+  // If finance user, render the specialized FinanceDashboard
+  if (isFinanceUser) {
+    if (loading) return (
+      <div className="space-y-5 animate-pulse">
+        <div className="h-10 bg-gray-200 rounded-lg"/>
+        <div className="grid grid-cols-6 gap-3">{[...Array(6)].map((_,i)=><div key={i} className="h-24 bg-gray-200 rounded-xl"/>)}</div>
+        <div className="grid grid-cols-2 gap-5">
+          <div className="space-y-4"><div className="h-56 bg-gray-200 rounded-xl"/><div className="h-64 bg-gray-200 rounded-xl"/></div>
+          <div className="space-y-4"><div className="h-56 bg-gray-200 rounded-xl"/><div className="h-56 bg-gray-200 rounded-xl"/></div>
+        </div>
+      </div>
+    );
+
+    return (
+      <FinanceDashboard 
+        measurements={measurements}
+        materials={materials}
+        abstracts={abstracts}
+        totalUsed={totalUsed}
+        totalCommitted={totalCommitted}
+        TOTAL_WARD_BUDGET={TOTAL_WARD_BUDGET}
+        BudgetPieChart={BudgetPieChart}
+        banner={banner}
+        bStyle={bStyle}
+        bannerAlerts={bannerAlerts}
+        alertIdx={alertIdx}
+        setAlertIdx={setAlertIdx}
+        fetchAll={fetchAll}
+      />
+    );
+  }
+
+  // Regular dashboard for non-finance users
   if (loading) return (
     <div className="space-y-5 animate-pulse">
       <div className="h-10 bg-gray-200 rounded-lg"/>
@@ -645,7 +685,7 @@ export default function Dashboard() {
                 </tfoot>
               </table>
             )}
-          </div>
+            </div>
         </div>
 
         {/* RIGHT sidebar */}
