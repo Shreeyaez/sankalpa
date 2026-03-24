@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import FinanceDashboard from "./FinanceDashboard";
+import FinanceDashboard from "./dashboard/FinanceDashboard";
 
 const TOTAL_WARD_BUDGET = 45_000_000;
 
