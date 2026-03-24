@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import Account
-# from .constants import UserRoles
+from .constants import UserRoles
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -9,8 +9,9 @@ class AccountSerializer(serializers.ModelSerializer):
     Serializer for Account model.
     Used for returning user data after login/register.
     """
-    # role = serializers.SerializerMethodField()
-    
+
+    role = serializers.SerializerMethodField()
+
     class Meta:
         model = Account
         fields = [
@@ -24,21 +25,21 @@ class AccountSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at"]
 
-    # def get_role(self, obj):
-    #     """
-    #     Return specific role based on related profiles.
-    #     Checks for engineer, chairperson, or financeperson profiles.
-    #     """
-    #     if hasattr(obj, "engineer_profile"):
-    #         return UserRoles.ENGINEER.value
-    #     if hasattr(obj, "chairperson_profile"):
-    #         return UserRoles.CHAIRPERSON.value
-    #     if hasattr(obj, "financeperson_profile"):
-    #         return UserRoles.FINANCE.value
-    #     # Convert database role to display format
-    #     if obj.role == "ADMIN":
-    #         return UserRoles.ADMIN.value
-    #     return UserRoles.USER.value
+    def get_role(self, obj):
+        """
+        Return specific role based on related profiles.
+        Checks for engineer, chairperson, or financeperson profiles.
+        """
+        if hasattr(obj, "engineer_profile"):
+            return UserRoles.ENGINEER.value
+        if hasattr(obj, "chairperson_profile"):
+            return UserRoles.CHAIRPERSON.value
+        if hasattr(obj, "financeperson_profile"):
+            return UserRoles.FINANCE.value
+        # Convert database role to display format
+        if obj.role == "ADMIN":
+            return UserRoles.ADMIN.value
+        return UserRoles.USER.value
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -46,10 +47,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     Serializer for user registration.
     Handles password validation and user creation.
     """
+
     password = serializers.CharField(
-        write_only=True,
-        min_length=8,
-        style={'input_type': 'password'}
+        write_only=True, min_length=8, style={"input_type": "password"}
     )
 
     class Meta:
@@ -84,11 +84,9 @@ class LoginSerializer(serializers.Serializer):
     Serializer for user login.
     Validates email and password.
     """
+
     email = serializers.EmailField()
-    password = serializers.CharField(
-        write_only=True,
-        style={'input_type': 'password'}
-    )
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
 
     def validate(self, data):
         """
@@ -104,7 +102,7 @@ class LoginSerializer(serializers.Serializer):
         # Authenticate without request context
         user = authenticate(
             username=email,  # Django's authenticate uses 'username' parameter
-            password=password
+            password=password,
         )
 
         if not user:

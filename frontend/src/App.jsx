@@ -6,7 +6,7 @@ import {
   Outlet,
 } from "react-router-dom";
 
-import './i18n';
+import "./i18n";
 
 import { AuthProvider } from "./context/AuthContext";
 
@@ -15,7 +15,7 @@ import Topbar from "./components/Topbar";
 
 import Login from "./auth/Login";
 import RequireAuth from "./auth/RequireAuth";
-// import { getAllUserRoles } from "./constants/userRoles";
+import { getAllUserRoles } from "./constants/userRoles";
 
 import Dashboard from "./pages/Dashboard";
 
@@ -86,7 +86,7 @@ export default function App() {
           <Route
             path="/app"
             element={
-              // <RequireAuth allowedRoles={getAllUserRoles()}>
+              <RequireAuth allowedRoles={getAllUserRoles()}>
                 <AppLayout />
               </RequireAuth>
             }
@@ -116,7 +116,10 @@ export default function App() {
 
             <Route path="contractors" element={<ContractorsList />} />
             <Route path="contractors/add" element={<AddContractor />} />
-            <Route path="contractors/:id/view" element={<ContractorDetails />} />
+            <Route
+              path="contractors/:id/view"
+              element={<ContractorDetails />}
+            />
             <Route path="contractors/:id/edit" element={<AddContractor />} />
 
             <Route path="engineers" element={<EngineersList />} />
