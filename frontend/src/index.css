@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Optional: calendar styles */
+.react-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+}
+
+.react-calendar__navigation button {
+  font-weight: 600;
+}
+
+.react-calendar__tile {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.react-calendar__tile--now {
+  background: #fdba74;
+  color: white;
+}
+
+.react-calendar__tile--active {
+  background: #3b82f6;
+  color: white;
+}

@@ -1,0 +1,61 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ===== Django =====
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Django media & static (usually generated)
+media/
+staticfiles/
+
+# ===== Environment variables =====
+.env.*
+!.env.example
+
+# ===== IDEs & editors =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+
+# ===== Tests / coverage =====
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Celery / Redis =====
+celerybeat-schedule
+celerybeat.pid
+
+
+#==== additional ====
+test.html
+test2.html

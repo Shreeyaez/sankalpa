@@ -1,0 +1,42 @@
+{
+  "email": "superadmin@example.com",
+  "full_name": "Super Admin",
+  "user_id": "superadmin001",
+  "password": "SuperAdminPass123!",
+  "role": "ADMIN"
+}
+{
+  "email": "engineer@example.com",
+  "full_name": "Engineer User",
+  "user_id": "engineer001",
+  "password": "EngineerPass123!",
+  "role": "USER"
+}
+{
+  "email": "supervisor@example.com",
+  "full_name": "Supervisor User",
+  "user_id": "supervisor001",
+  "password": "SupervisorPass123!",
+  "role": "USER"
+}
+{
+  "email": "chairperson@example.com",
+  "full_name": "Chairperson User",
+  "user_id": "chairperson001",
+  "password": "ChairpersonPass123!",
+  "role": "USER"
+}
+{
+  "email": "finance@example.com",
+  "full_name": "Finance User",
+  "user_id": "finance001",
+  "password": "FinancePass123!",
+  "role": "USER"
+}
+{
+  "email": "user@example.com",
+  "full_name": "Just User",
+  "user_id": "user001",
+  "password": "UserPass123!",
+  "role": "USER"
+}
