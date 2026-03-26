@@ -170,28 +170,34 @@ export default function App() {
             />
 
             {/* Engineers — all can view, only Admin+Engineer can add/edit */}
-            <Route path="engineers"          element={<EngineersList />}   />
-            <Route path="engineers/:id/view" element={<EngineerDetails />} />
-            <Route path="engineers/add"
-              element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddEngineer /></RequireAuth>}
-            />
-            <Route path="engineers/:id/edit"
-              element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddEngineer /></RequireAuth>}
-            />
+            <Route path="engineers"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><EngineersList /></RequireAuth>}
+/>
+<Route path="engineers/add"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddEngineer /></RequireAuth>}
+/>
+<Route path="engineers/:id/view"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><EngineerDetails /></RequireAuth>}
+/>
+<Route path="engineers/:id/edit"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddEngineer /></RequireAuth>}
+/>
 
             {/* Chairpersons — all can view, only Admin can add */}
-            <Route path="chairpersons"     element={<ChairpersonsList />} />
-            <Route path="chairpersons/add"
-              element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddChairperson /></RequireAuth>}
-            />
+            <Route path="chairpersons"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><ChairpersonsList /></RequireAuth>}
+/>
+<Route path="chairpersons/add"
+  element={<RequireAuth allowedRoles={ADMIN_ONLY}><AddChairperson /></RequireAuth>}
+/>
 
             {/* Past records — all can view */}
             <Route path="past-records" element={<PastProjectRecords />} />
 
             {/* Audit — Admin only */}
             <Route path="audit"
-             element={<RequireAuth allowedRoles={AUDIT_ROLES}><AuditTrail /></RequireAuth>}
-            />
+  element={<RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.CHAIRPERSON]}><AuditTrail /></RequireAuth>}
+/>
 
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>

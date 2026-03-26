@@ -11,11 +11,13 @@ export const getAllUserRoles = () => Object.values(ROLES);
 export const canEdit = (role) =>
   [ROLES.ADMIN, ROLES.ENGINEER].includes(role);
 
+// Audit — Admin + Chairperson only (NOT engineer)
 export const canViewAudit = (role) =>
   [ROLES.ADMIN, ROLES.CHAIRPERSON].includes(role);
 
+// Officials — Admin only (NOT engineer, NOT chairperson)
 export const canViewOfficials = (role) =>
-  [ROLES.ADMIN, ROLES.ENGINEER].includes(role);
+  role === ROLES.ADMIN;
 
 export const isFinanceOnly = (role) =>
   role === ROLES.FINANCE;
