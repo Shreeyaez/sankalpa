@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 
 
 class AccountManager(BaseUserManager):
-    def create_user(self, email, full_name, user_id, password=None, role="USER"):
+    def create_user(self, email, full_name, user_id, password=None, role="USER", sub_role=None):
         if not email:
             raise ValueError("Email address is required")
         if not user_id:
@@ -16,6 +16,7 @@ class AccountManager(BaseUserManager):
             full_name=full_name,
             user_id=user_id,
             role=role,
+            sub_role=sub_role or "",
         )
         user.set_password(password)
         user.save(using=self._db)
@@ -39,6 +40,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     """
     Core authentication model.
     Roles: ADMIN, USER
+    Sub-roles (for USER): ENGINEER, CHAIRPERSON, FINANCE
     """
 
     ROLE_CHOICES = (
@@ -46,23 +48,28 @@ class Account(AbstractBaseUser, PermissionsMixin):
         ("USER", "User"),
     )
 
-    user_id = models.CharField(
-        max_length=50,
-        unique=True
+    SUB_ROLE_CHOICES = (
+        ("", "None"),
+        ("ENGINEER", "Engineer"),
+        ("CHAIRPERSON", "Chairperson"),
+        ("FINANCE", "Finance"),
     )
 
-    full_name = models.CharField(
-        max_length=150
-    )
-
-    email = models.EmailField(
-        unique=True
-    )
+    user_id = models.CharField(max_length=50, unique=True)
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField(unique=True)
 
     role = models.CharField(
         max_length=10,
         choices=ROLE_CHOICES,
         default="USER"
+    )
+
+    sub_role = models.CharField(
+        max_length=15,
+        choices=SUB_ROLE_CHOICES,
+        default="",
+        blank=True,
     )
 
     is_active = models.BooleanField(default=True)
@@ -83,3 +90,15 @@ class Account(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.full_name} ({self.email})"
+
+    @property
+    def effective_role(self):
+        """
+        Returns the role used for permission checks.
+        ADMIN → 'ADMIN'
+        USER with sub_role → sub_role (e.g. 'ENGINEER')
+        USER without sub_role → 'USER'
+        """
+        if self.role == "ADMIN":
+            return "ADMIN"
+        return self.sub_role or "USER"

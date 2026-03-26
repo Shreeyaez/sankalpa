@@ -1,141 +1,111 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+def get_role(user):
+    if not user or not user.is_authenticated:
+        return None
+    return getattr(user, "effective_role", None)
 
-def is_admin(user):
-    return user.is_authenticated and user.role == "ADMIN"
+def is_admin(user):       return get_role(user) == "ADMIN"
+def is_engineer(user):    return get_role(user) == "ENGINEER"
+def is_chairperson(user): return get_role(user) == "CHAIRPERSON"
+def is_finance(user):     return get_role(user) == "FINANCE"
 
-
-def is_finance(user):
-    return hasattr(user, "financeperson_profile")
-
-
-def is_engineer(user):
-    return hasattr(user, "engineer_profile")
-
-
-def is_chairperson(user):
-    return hasattr(user, "chairperson_profile")
 
 class GlobalRBACPermission(BasePermission):
     """
-    Global permission rule:
-
-    IF user has scoped access → full CRUD
-    ELSE → read-only
+    ADMIN       → full CRUD everywhere
+    ENGINEER    → full CRUD on all main app
+    CHAIRPERSON → read-only on projects, contractors, delay-logs ONLY
+                  blocked from measurement, abstract, materials, weekly-logs
+    FINANCE     → blocked from main app
+    USER        → read-only fallback
     """
+
+    # Views chairperson is BLOCKED from entirely
+    CHAIRPERSON_BLOCKED_VIEWS = [
+        "measurementbook",
+        "material",
+        "abstractcost",
+        "weeklylog",
+        "delaylog",
+        "engineer",
+        "financeperson",
+    ]
 
     def has_permission(self, request, view):
         user = request.user
-
         if not user.is_authenticated:
             return False
 
-        # ADMIN → full CRUD
-        if is_admin(user):
+        role = get_role(user)
+
+        if role == "ADMIN":
             return True
 
-        # Engineer or Chairperson → allow endpoint access
-        if is_engineer(user) or is_chairperson(user):
+        if role == "ENGINEER":
             return True
 
-        # Normal user → read-only
+        if role == "CHAIRPERSON":
+            # Block specific views entirely
+            view_name = getattr(view, "basename", "").lower()
+            if view_name in self.CHAIRPERSON_BLOCKED_VIEWS:
+                return False
+            return request.method in SAFE_METHODS
+
+        if role == "FINANCE":
+            return False
+
         return request.method in SAFE_METHODS
 
     def has_object_permission(self, request, view, obj):
         user = request.user
+        role = get_role(user)
 
-        # ADMIN → full CRUD
-        if is_admin(user):
+        if role == "ADMIN":    return True
+        if role == "ENGINEER": return True
+
+        if role == "CHAIRPERSON":
+            view_name = getattr(view, "basename", "").lower()
+            if view_name in self.CHAIRPERSON_BLOCKED_VIEWS:
+                return False
+            return request.method in SAFE_METHODS
+
+        return request.method in SAFE_METHODS
+
+
+class AuditRBAC(BasePermission):
+    """
+    ADMIN + CHAIRPERSON → read-only
+    Others → blocked
+    """
+    def has_permission(self, request, view):
+        role = get_role(request.user)
+        if role == "ADMIN":
             return True
-
-        # READ access always allowed
-        if request.method in SAFE_METHODS:
-            return True
-
-        # Engineer access
-        if is_engineer(user):
-            engineer = user.engineer_profile
-
-            # Must belong to assigned project
-            if hasattr(obj, "project"):
-                if obj.project.assigned_engineer != engineer:
-                    return False
-            elif hasattr(obj, "assigned_engineer"):
-                if obj.assigned_engineer != engineer:
-                    return False
-
-            # Role-specific model access
-            if engineer.role == "ENGINEER":
-                return view.basename in [
-                    "milestone", "road", "weekly-logs", "delay-logs",
-                ]
-
-            if engineer.role == "SUPERVISOR":
-                return view.basename in [
-                    "milestone", "road", "weekly-logs", "delay-logs", "alerts",
-                ]
-
-        # Chairperson access
-        if is_chairperson(user):
-            chair = user.chairperson_profile
-
-            if hasattr(obj, "project"):
-                if obj.project.chairperson != chair:
-                    return False
-            elif hasattr(obj, "chairperson"):
-                if obj.chairperson != chair:
-                    return False
-
-            return view.basename in [
-                "project", "milestone", "road", "weekly-logs", "delay-logs", "alerts",
-            ]
-
-        # Default → read-only
+        if role == "CHAIRPERSON":
+            return request.method in SAFE_METHODS
         return False
+
+    def has_object_permission(self, request, view, obj):
+        role = get_role(request.user)
+        if role == "ADMIN":
+            return True
+        if role == "CHAIRPERSON":
+            return request.method in SAFE_METHODS
+        return False
+
 
 class FinanceRBAC(BasePermission):
     """
-    FinancePerson → full CRUD in finance app
-    Others → read-only
+    FINANCE + ADMIN → full CRUD
+    Others → blocked
     """
-
     def has_permission(self, request, view):
-        user = request.user
-
-        if not user.is_authenticated:
+        if not request.user.is_authenticated:
             return False
-
-        if is_admin(user):
-            return True
-
-        if is_finance(user):
-            return True
-
-        return request.method in SAFE_METHODS
+        role = get_role(request.user)
+        return role in ("ADMIN", "FINANCE")
 
     def has_object_permission(self, request, view, obj):
-        user = request.user
-
-        if is_admin(user):
-            return True
-
-        if is_finance(user):
-            return True
-
-        return request.method in SAFE_METHODS
-
-class AuditRBAC(BasePermission):
-
-    def has_permission(self, request, view):
-        user = request.user
-
-        if not user.is_authenticated:
-            return False
-
-        if is_admin(user):
-            return True
-
-        return request.method in SAFE_METHODS
-
-    def has_object_permission(self, request, view, obj):
-        return self.has_permission(request, view)
+        role = get_role(request.user)
+        return role in ("ADMIN", "FINANCE")

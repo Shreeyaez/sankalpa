@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',  # ← Add this
     
     # Your apps
@@ -90,7 +91,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'sankalpa_database',
         'USER': 'postgres',
-        'PASSWORD': '12345', #Use your actual password here
+        'PASSWORD': 'vkookbts10*', #Use your actual password here
         'HOST': 'localhost',
         'PORT': '5432',
     }
