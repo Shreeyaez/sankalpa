@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
-from django.db import models
 import json
+from threading import local
 
 from apps.audit.models import AuditLog
 from apps.contractors.models import Contractor
@@ -10,7 +10,16 @@ from apps.engineers.models import Engineer
 from apps.chairpersons.models import Chairperson
 from apps.projects.models import Project
 
-# Add all models you want to track
+# Thread-local storage for current user
+_thread_locals = local()
+
+def get_current_user():
+    return getattr(_thread_locals, 'user', None)
+
+def set_current_user(user):
+    _thread_locals.user = user
+
+# Models to track
 TRACKED_MODELS = [Contractor, Engineer, Chairperson, Project]
 
 def serialize_instance(instance):
@@ -32,24 +41,21 @@ def store_old_data(sender, instance, **kwargs):
     if sender not in TRACKED_MODELS:
         return
     
-    if instance.pk:  # Only for existing records (updates)
+    if instance.pk:  # Only for updates
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             instance._old_data = serialize_instance(old_instance)
         except sender.DoesNotExist:
-            instance._old_data = {}
+            pass
 
 @receiver(post_save)
 def log_model_save(sender, instance, created, **kwargs):
     if sender not in TRACKED_MODELS:
         return
     
-    # Get current user from thread local storage (we'll set this up next)
-    from apps.audit.middleware import get_current_user
     user = get_current_user()
-    
     if not user:
-        return  # Skip if no authenticated user
+        return
     
     try:
         AuditLog.objects.create(
@@ -61,16 +67,14 @@ def log_model_save(sender, instance, created, **kwargs):
             changed_by=user
         )
     except Exception as e:
-        print(f"Audit log creation failed: {e}")
+        print(f"Audit log error: {e}")
 
 @receiver(post_delete)
 def log_model_delete(sender, instance, **kwargs):
     if sender not in TRACKED_MODELS:
         return
     
-    from apps.audit.middleware import get_current_user
     user = get_current_user()
-    
     if not user:
         return
     
@@ -84,4 +88,4 @@ def log_model_delete(sender, instance, **kwargs):
             changed_by=user
         )
     except Exception as e:
-        print(f"Audit log creation failed: {e}")
+        print(f"Audit log error: {e}")

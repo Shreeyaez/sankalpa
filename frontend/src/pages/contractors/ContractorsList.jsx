@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Loader2, Briefcase, Eye, Pencil } from "lucide-react";
+import { Plus, Trash2, Loader2, Briefcase, Eye, Pencil, Search } from "lucide-react";
 import { contractorsAPI } from "../../api/axios";
 
 export default function ContractorsList() {
@@ -9,6 +9,7 @@ export default function ContractorsList() {
   const { t } = useTranslation();
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => { fetchContractors(); }, []);
 
@@ -36,6 +37,19 @@ export default function ContractorsList() {
     }
   };
 
+  const filteredContractors = search.trim()
+    ? contractors.filter(c => {
+        const q = search.trim().toLowerCase();
+        return (
+          c.contractor_name?.toLowerCase().includes(q) ||
+          c.company_name?.toLowerCase().includes(q) ||
+          c.contractor_type?.toLowerCase().includes(q) ||
+          c.contact_number?.toLowerCase().includes(q) ||
+          c.email?.toLowerCase().includes(q)
+        );
+      })
+    : contractors;
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -44,6 +58,7 @@ export default function ContractorsList() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Briefcase className="w-8 h-8 text-blue-600" />
@@ -58,18 +73,47 @@ export default function ContractorsList() {
         </button>
       </div>
 
-      {contractors.length === 0 ? (
+      {/* Search bar */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, company, type, contact..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Table / Empty state */}
+      {filteredContractors.length === 0 ? (
         <div className="bg-white p-12 rounded-lg shadow text-center">
           <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">{t("contractors.no_contractors")}</h3>
-          <p className="text-gray-500 mb-4">{t("contractors.no_contractors_sub")}</p>
-          <button
-            onClick={() => navigate("/app/contractors/add")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            {t("contractors.add_btn")}
-          </button>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            {search ? `No contractors match "${search}"` : t("contractors.no_contractors")}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {search ? "Try a different search term." : t("contractors.no_contractors_sub")}
+          </p>
+          {!search && (
+            <button
+              onClick={() => navigate("/app/contractors/add")}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              {t("contractors.add_btn")}
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -85,7 +129,7 @@ export default function ContractorsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {contractors.map((c) => (
+              {filteredContractors.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{c.contractor_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.company_name || "N/A"}</td>
