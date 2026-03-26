@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, XCircle, Loader2, FolderOpen, Pencil } from "lucide-react";
+import { Plus, Eye, XCircle, Loader2, FolderOpen, Pencil, Search } from "lucide-react";
 import { projectsAPI } from "../../api/axios";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from "../../context/AuthContext";
@@ -14,6 +14,7 @@ export default function ProjectsList() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
 
   useEffect(() => { fetchData(); }, []);
 
@@ -75,7 +76,22 @@ export default function ProjectsList() {
     }
   };
 
-  const getFilteredProjects = () => filter === "ALL" ? projects : projects.filter(p => p.status === filter);
+  const getFilteredProjects = () => {
+    let result = filter === "ALL" ? projects : projects.filter(p => p.status === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(p =>
+        p.project_name?.toLowerCase().includes(q) ||
+        p.project_code?.toLowerCase().includes(q) ||
+        p.location?.toLowerCase().includes(q) ||
+        p.municipality?.toLowerCase().includes(q) ||
+        getContractorName(p).toLowerCase().includes(q) ||
+        getEngineerName(p).toLowerCase().includes(q) ||
+        getChairpersonName(p).toLowerCase().includes(q)
+      );
+    }
+    return result;
+  };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -115,7 +131,6 @@ export default function ProjectsList() {
           <FolderOpen className="w-8 h-8 text-blue-600" />
           <h1 className="text-2xl font-semibold text-gray-800">{t('project.all')}</h1>
         </div>
-        {/* Add button — hidden for chairperson */}
         {canWrite && (
           <button
             onClick={() => navigate("/app/projects/add")}
@@ -127,15 +142,31 @@ export default function ProjectsList() {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      {/* Search + Filters */}
+      <div className="bg-white rounded-lg shadow p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by project name, code, location, contractor, engineer..."
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {search && (
+            <button onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none">
+              ×
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-3">
-          <FilterButton label={t('all')}                    count={counts.all}         isActive={filter === "ALL"}         onClick={() => setFilter("ALL")}         />
+          <FilterButton label={t('all')}                        count={counts.all}         isActive={filter === "ALL"}         onClick={() => setFilter("ALL")}         />
           <FilterButton label={t('project.status.coming_soon')} count={counts.coming_soon} isActive={filter === "COMING_SOON"} onClick={() => setFilter("COMING_SOON")} color="blue"   />
-          <FilterButton label={t('project.status.ongoing')} count={counts.ongoing}    isActive={filter === "ONGOING"}     onClick={() => setFilter("ONGOING")}     color="green"  />
-          <FilterButton label={t('project.status.delayed')} count={counts.delayed}    isActive={filter === "DELAYED"}     onClick={() => setFilter("DELAYED")}     color="red"    />
-          <FilterButton label={t('project.status.completed')} count={counts.completed} isActive={filter === "COMPLETED"}  onClick={() => setFilter("COMPLETED")}   color="purple" />
-          <FilterButton label={t('project.status.cancelled')} count={counts.cancelled} isActive={filter === "CANCELLED"}  onClick={() => setFilter("CANCELLED")}   color="gray"   />
+          <FilterButton label={t('project.status.ongoing')}     count={counts.ongoing}     isActive={filter === "ONGOING"}     onClick={() => setFilter("ONGOING")}     color="green"  />
+          <FilterButton label={t('project.status.delayed')}     count={counts.delayed}     isActive={filter === "DELAYED"}     onClick={() => setFilter("DELAYED")}     color="red"    />
+          <FilterButton label={t('project.status.completed')}   count={counts.completed}   isActive={filter === "COMPLETED"}   onClick={() => setFilter("COMPLETED")}   color="purple" />
+          <FilterButton label={t('project.status.cancelled')}   count={counts.cancelled}   isActive={filter === "CANCELLED"}   onClick={() => setFilter("CANCELLED")}   color="gray"   />
         </div>
       </div>
 
@@ -143,10 +174,15 @@ export default function ProjectsList() {
       {filteredProjects.length === 0 ? (
         <div className="bg-white p-12 rounded-lg shadow text-center">
           <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('msg.no_data')}</h3>
-          <p className="text-gray-500 mb-4">{filter === "ALL" ? t('get_started') : t('no_projects_status')}</p>
-          {filter === "ALL" && canWrite && (
-            <button onClick={() => navigate("/app/projects/add")} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            {search ? `No projects match "${search}"` : t('msg.no_data')}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {search ? "Try a different search term." : filter === "ALL" ? t('get_started') : t('no_projects_status')}
+          </p>
+          {filter === "ALL" && !search && canWrite && (
+            <button onClick={() => navigate("/app/projects/add")}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2">
               <Plus className="w-5 h-5" />{t('project.add')}
             </button>
           )}
@@ -181,12 +217,10 @@ export default function ProjectsList() {
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(project.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      {/* View — everyone */}
                       <button onClick={(e) => handleViewProject(e, project.id)}
                         className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition" title={t('view_details')}>
                         <Eye className="w-5 h-5" />
                       </button>
-                      {/* Edit + Cancel — admin/engineer only */}
                       {canWrite && project.status !== "CANCELLED" && (
                         <button onClick={(e) => handleEditProject(e, project.id)}
                           className="text-amber-600 hover:text-amber-900 p-1 hover:bg-amber-50 rounded transition" title={t('edit_project')}>
