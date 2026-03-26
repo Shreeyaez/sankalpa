@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Loader2, Briefcase, Eye, Pencil } from "lucide-react";
 import { contractorsAPI } from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
+import { canEdit } from "../../constants/userRoles.jsx";
 
 export default function ContractorsList() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { userRole } = useAuth();
+  const canWrite = canEdit(userRole);
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,13 +53,13 @@ export default function ContractorsList() {
           <Briefcase className="w-8 h-8 text-blue-600" />
           <h1 className="text-2xl font-semibold text-gray-800">{t("contractors.title")}</h1>
         </div>
-        <button
-          onClick={() => navigate("/app/contractors/add")}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          {t("contractors.add_btn")}
-        </button>
+        {/* Add button — hidden for chairperson */}
+        {canWrite && (
+          <button onClick={() => navigate("/app/contractors/add")}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition flex items-center gap-2">
+            <Plus className="w-5 h-5" />{t("contractors.add_btn")}
+          </button>
+        )}
       </div>
 
       {contractors.length === 0 ? (
@@ -63,13 +67,12 @@ export default function ContractorsList() {
           <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">{t("contractors.no_contractors")}</h3>
           <p className="text-gray-500 mb-4">{t("contractors.no_contractors_sub")}</p>
-          <button
-            onClick={() => navigate("/app/contractors/add")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            {t("contractors.add_btn")}
-          </button>
+          {canWrite && (
+            <button onClick={() => navigate("/app/contractors/add")}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2">
+              <Plus className="w-5 h-5" />{t("contractors.add_btn")}
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -94,43 +97,34 @@ export default function ContractorsList() {
                       {t("contractors.col_type")} {c.contractor_type || "N/A"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {c.contact_number || c.email || "N/A"}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.contact_number || c.email || "N/A"}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {c.suchidarta_flagged ? (
-                      <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">
-                        ✓ {t("contractors.active_approved")}
-                      </span>
+                      <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">✓ {t("contractors.active_approved")}</span>
                     ) : (
-                      <span className="px-3 py-1 text-xs rounded-full bg-orange-100 text-orange-800 font-medium">
-                        ⏳ {t("contractors.pending_approval")}
-                      </span>
+                      <span className="px-3 py-1 text-xs rounded-full bg-orange-100 text-orange-800 font-medium">⏳ {t("contractors.pending_approval")}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => navigate(`/app/contractors/${c.id}/view`)}
-                        className="text-gray-400 hover:text-blue-600 transition-colors"
-                        title={t("view")}
-                      >
+                      {/* View — everyone */}
+                      <button onClick={() => navigate(`/app/contractors/${c.id}/view`)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors" title={t("view")}>
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => navigate(`/app/contractors/${c.id}/edit`)}
-                        className="text-gray-400 hover:text-amber-500 transition-colors"
-                        title={t("edit")}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors"
-                        title={t("delete")}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Edit + Delete — admin/engineer only */}
+                      {canWrite && (
+                        <>
+                          <button onClick={() => navigate(`/app/contractors/${c.id}/edit`)}
+                            className="text-gray-400 hover:text-amber-500 transition-colors" title={t("edit")}>
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(c.id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors" title={t("delete")}>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -12,7 +12,7 @@
  * npm install nepali-date-converter
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import NepaliDate from "nepali-date-converter";
 import { useTranslation } from "react-i18next";
 
@@ -91,6 +91,21 @@ export default function BSDatePicker({ label, name, value, onChange, required = 
   const [bsYear,  setBsYear]  = useState(parsed?.year  ?? todayBs?.year  ?? 2081);
   const [bsMonth, setBsMonth] = useState(parsed?.month ?? todayBs?.month ?? 0);
   const [bsDay,   setBsDay]   = useState(parsed?.day   ?? 1);
+
+  const hasMounted = useRef(false);
+
+  // Emit initial value on mount only if no value is provided
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      if (!value) {
+        const adValue = bsToAd(bsYear, bsMonth, Math.min(bsDay, getDaysInBsMonth(bsYear, bsMonth)));
+        if (adValue) {
+          onChange({ target: { name, value: adValue } });
+        }
+      }
+    }
+  }, []);
 
   // Sync selects when external value changes (edit-mode pre-fill)
   useEffect(() => {

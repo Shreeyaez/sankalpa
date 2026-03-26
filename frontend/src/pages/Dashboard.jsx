@@ -39,7 +39,6 @@ function toNepaliDate(adDate) {
 }
 
 function getDaysInBSMonth(bsYear, bsMonth0) {
-  // Get last day of this BS month by subtracting 1 day from the 1st of next month
   try {
     const firstOfNextAD = new NepaliDate(
       bsMonth0 === 11 ? bsYear + 1 : bsYear,
@@ -157,7 +156,6 @@ function ProjectCalendar({ projects }) {
   const todayBsMonth = todayNP.getMonth();
   const todayBsDay   = todayNP.getDate();
 
-  // Map project AD dates → BS day numbers for current view
   const eventsByDay = {};
   projects.forEach(p => {
     const checkDate = (dateStr, type) => {
@@ -210,14 +208,12 @@ function ProjectCalendar({ projects }) {
       </div>
 
       <div className="p-4">
-        {/* Day headers */}
         <div className="grid grid-cols-7 mb-2">
           {(Array.isArray(dayNames) ? dayNames : []).map(d => (
             <div key={d} className="text-center text-[10px] font-semibold text-gray-400 uppercase py-1">{d}</div>
           ))}
         </div>
 
-        {/* Day cells */}
         <div className="grid grid-cols-7 gap-y-1">
           {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`}/>)}
           {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -260,7 +256,6 @@ function ProjectCalendar({ projects }) {
           })}
         </div>
 
-        {/* Legend */}
         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50">
           <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
             <span className="w-2 h-2 rounded-full bg-blue-500"/>{t("dashboard.start_date")}
@@ -306,10 +301,9 @@ export default function Dashboard() {
   const [alerts,       setAlerts]       = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [lastUpdated,  setLastUpdated]  = useState(null);
-  const [statusFilter, setStatusFilter] = useState("ALL");
   const [alertIdx,     setAlertIdx]     = useState(0);
 
-  // TODO: use enums here i.e. USER_ROLES.FINANCE : @shreeya 
+  // TODO: use enums here i.e. USER_ROLES.FINANCE : @shreeya
   const isFinanceUser = user?.role === 'Finance';
 
   const STATUS_META = {
@@ -400,10 +394,7 @@ export default function Dashboard() {
   const banner = bannerAlerts[alertIdx % bannerAlerts.length];
   const bStyle = {error:"bg-red-600", warning:"bg-amber-500", info:"bg-slate-700"};
 
-  const filtered = statusFilter==="ALL" ? projects : projects.filter(p=>p.status===statusFilter);
-
   // TODO: fix the messy conditional rendering here and also utilize the essential data only - needs refactor. @shreeya
-  // If finance user, render the specialized FinanceDashboard
   if (isFinanceUser) {
     if (loading) return (
       <div className="space-y-5 animate-pulse">
@@ -417,7 +408,7 @@ export default function Dashboard() {
     );
 
     return (
-      <FinanceDashboard 
+      <FinanceDashboard
         measurements={measurements}
         materials={materials}
         abstracts={abstracts}
@@ -435,7 +426,6 @@ export default function Dashboard() {
     );
   }
 
-  // Regular dashboard for non-finance users
   if (loading) return (
     <div className="space-y-5 animate-pulse">
       <div className="h-10 bg-gray-200 rounded-lg"/>
@@ -507,7 +497,7 @@ export default function Dashboard() {
       {/* Main layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        {/* LEFT */}
+        {/* LEFT col — Budget + Due Soon + Project Health */}
         <div className="xl:col-span-2 space-y-5">
 
           {/* Budget */}
@@ -539,7 +529,15 @@ export default function Dashboard() {
                 <CalendarClock className="w-4 h-4 text-orange-500"/>
                 <h3 className="font-semibold text-gray-800">{t("dashboard.due_soon")}</h3>
               </div>
-              <span className="text-xs text-gray-400">{dueSoon.length} {t("nav.projects").toLowerCase()}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">{dueSoon.length} {t("nav.projects").toLowerCase()}</span>
+                <button
+                  onClick={() => navigate("/app/projects")}
+                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium transition-colors"
+                >
+                  {t("dashboard.view_all")} <ArrowRight className="w-3 h-3"/>
+                </button>
+              </div>
             </div>
             {dueSoon.length === 0 ? (
               <div className="px-6 py-8 text-center">
@@ -585,107 +583,19 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* All Projects Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div>
-                <h3 className="font-semibold text-gray-800">{t("dashboard.all_projects")}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{projects.length} {t("total")} · {filtered.length} {t("dashboard.showing")}</p>
-              </div>
-              <div className="flex gap-1.5 flex-wrap">
-                {["ALL","ONGOING","DELAYED","COMPLETED","COMING_SOON","CANCELLED"].map(s=>(
-                  <button key={s} onClick={()=>setStatusFilter(s)}
-                    className={`px-3 py-1 rounded text-xs font-medium transition-all ${statusFilter===s?"bg-slate-800 text-white":"bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
-                    {s==="COMING_SOON" ? "SOON" : s}
-                  </button>
-                ))}
-              </div>
+          {/* Project Health — 2-col grid layout for wider left panel */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-4 h-4 text-blue-600"/>
+              <h3 className="font-semibold text-gray-800 text-sm">{t("dashboard.project_health")}</h3>
             </div>
-            {filtered.length===0 ? (
-              <div className="px-6 py-12 text-center text-gray-400 text-sm">
-                {t("dashboard.no_projects")} <button onClick={()=>navigate("/app/projects/add")} className="text-blue-600 underline ml-1">{t("dashboard.add_one")}</button>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-50 bg-gray-50/50">
-                    {[
-                      t("dashboard.col_project"),
-                      t("dashboard.col_contractor"),
-                      t("dashboard.col_budget"),
-                      t("dashboard.col_progress"),
-                      t("dashboard.col_status"),
-                      ""
-                    ].map((h,i)=>(
-                      <th key={i} className="px-4 py-3 text-left text-[11px] text-gray-400 uppercase tracking-wider font-medium">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filtered.map(p=>{
-                    const meta = STATUS_META[p.status]||STATUS_META.ONGOING;
-                    const pb   = pMap[p.id]||{estimated:0,used:0};
-                    const up   = pct(pb.used,pb.estimated);
-                    const over = pb.estimated>0 && up>=90;
-                    const hasAlert = unreadMilestone.some(a => a.project === p.id);
-                    return (
-                      <tr key={p.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
-                        onClick={()=>navigate(`/app/projects/${p.id}`)}>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            {hasAlert && <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500 animate-pulse" title={t("dashboard.overdue_milestones")}/>}
-                            <div>
-                              <p className="text-[10px] text-gray-400 font-mono">{p.project_code}</p>
-                              <p className="text-sm font-medium text-gray-800 mt-0.5 max-w-xs leading-snug">{p.project_name}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-gray-300 flex-shrink-0"/>
-                            <span className="text-xs text-gray-600 truncate max-w-[120px]">{contractorName(p)}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          {pb.estimated>0
-                            ? <p className="text-sm font-semibold text-gray-700">NPR {fmt(pb.estimated)}</p>
-                            : <p className="text-xs text-gray-400 italic">{t("dashboard.no_estimate")}</p>}
-                          {p.planned_completion_date && <p className="text-[10px] text-gray-400 mt-0.5">Due {p.planned_completion_date}</p>}
-                        </td>
-                        <td className="px-4 py-3.5 w-36">
-                          {pb.estimated>0 ? (
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all ${over?"bg-red-500":"bg-blue-500"}`} style={{width:`${up}%`}}/>
-                              </div>
-                              <span className={`text-xs font-medium w-8 text-right ${over?"text-red-600":"text-gray-600"}`}>{up}%</span>
-                            </div>
-                          ) : <span className="text-xs text-gray-300">—</span>}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${meta.bg} ${meta.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`}/>{meta.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1 text-xs text-blue-600">
-                            {t("view")} <ArrowRight className="w-3 h-3"/>
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-100 bg-gray-50/50">
-                    <td colSpan={2} className="px-4 py-3 text-xs text-gray-400">{t("dashboard.showing")} {filtered.length} / {projects.length}</td>
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-600">Est: NPR {fmt(filtered.reduce((s,p)=>s+(pMap[p.id]?.estimated||0),0))}</td>
-                    <td colSpan={3}/>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <HealthBar label={t("dashboard.on_track")}         val={stats.ongoing}     total={stats.total} color="bg-blue-500"    textColor="text-blue-700"/>
+              <HealthBar label={t("project.status.delayed")}     val={stats.delayed}     total={stats.total} color="bg-red-500"     textColor="text-red-700"/>
+              <HealthBar label={t("project.status.completed")}   val={stats.completed}   total={stats.total} color="bg-emerald-500" textColor="text-emerald-700"/>
+              <HealthBar label={t("project.status.coming_soon")} val={stats.coming_soon} total={stats.total} color="bg-purple-400"  textColor="text-purple-700"/>
             </div>
+          </div>
         </div>
 
         {/* RIGHT sidebar */}
@@ -757,20 +667,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Project Health */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-blue-600"/>
-              <h3 className="font-semibold text-gray-800 text-sm">{t("dashboard.project_health")}</h3>
-            </div>
-            <div className="space-y-2.5">
-              <HealthBar label={t("dashboard.on_track")}         val={stats.ongoing}     total={stats.total} color="bg-blue-500"    textColor="text-blue-700"/>
-              <HealthBar label={t("project.status.delayed")}     val={stats.delayed}     total={stats.total} color="bg-red-500"     textColor="text-red-700"/>
-              <HealthBar label={t("project.status.completed")}   val={stats.completed}   total={stats.total} color="bg-emerald-500" textColor="text-emerald-700"/>
-              <HealthBar label={t("project.status.coming_soon")} val={stats.coming_soon} total={stats.total} color="bg-purple-400"  textColor="text-purple-700"/>
             </div>
           </div>
 

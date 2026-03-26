@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../context/AuthContext";
+import { canAccessModule } from "../../constants/userRoles.jsx";
 import { 
   FileText, Ruler, FileSpreadsheet, 
   Package, BarChart3, Calendar, ArrowLeft 
@@ -36,14 +38,16 @@ export default function ProjectLayout() {
     }
   };
 
-  const tabs = [
-    { name: t("project.overview"),     path: "overview",    icon: FileText },
-    { name: t("project.measurement"),  path: "measurement", icon: Ruler },
-    { name: t("project.abstract"),     path: "abstract",    icon: FileSpreadsheet },
-    { name: t("project.materials"),    path: "materials",   icon: Package },
-    { name: t("project.gantt"),        path: "gantt",       icon: BarChart3 },
-    { name: t("project.weekly_logs"),  path: "weekly-logs", icon: Calendar },
-  ];
+const { userRole } = useAuth();
+
+const tabs = [
+  { name: t("project.overview"),    path: "overview",    icon: FileText,        alwaysShow: true  },
+  { name: t("project.measurement"), path: "measurement", icon: Ruler,           alwaysShow: false },
+  { name: t("project.abstract"),    path: "abstract",    icon: FileSpreadsheet, alwaysShow: false },
+  { name: t("project.materials"),   path: "materials",   icon: Package,         alwaysShow: false },
+  { name: t("project.gantt"),       path: "gantt",       icon: BarChart3,       alwaysShow: true  },
+  { name: t("project.weekly_logs"), path: "weekly-logs", icon: Calendar,        alwaysShow: false },
+].filter(tab => tab.alwaysShow || canAccessModule(userRole, tab.path));
 
   const currentPath = location.pathname.split("/").pop();
 

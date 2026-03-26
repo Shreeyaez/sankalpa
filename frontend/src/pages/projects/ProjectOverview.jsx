@@ -9,8 +9,9 @@ import {
 import api from "../../api/axios";
 import BSDatePicker from "../../components/BSDatePicker";
 import NepaliDate from "nepali-date-converter";
+import { useAuth } from "../../context/AuthContext";
+import { canEdit } from "../../constants/userRoles.jsx";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt   = (n) => new Intl.NumberFormat("en-NP").format(Math.round(Number(n) || 0));
 const pct   = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
 const sumBy = (arr, k) => arr.reduce((s, x) => s + (Number(x[k]) || 0), 0);
@@ -27,7 +28,6 @@ function formatBSDate(adStr, lang = "en") {
   } catch { return "N/A"; }
 }
 
-// ─── Per-project mini donut ───────────────────────────────────────────────────
 function ProjectDonut({ estimated, used }) {
   const { t } = useTranslation();
   const cx = 80, cy = 80, r = 58, sw = 18;
@@ -72,12 +72,13 @@ function ProjectDonut({ estimated, used }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ProjectOverview() {
   const { projectId } = useParams();
   const navigate      = useNavigate();
-  const { t, i18n }   = useTranslation();
-  const lang           = i18n.language;
+  const { t, i18n }  = useTranslation();
+  const lang          = i18n.language;
+  const { userRole }  = useAuth();
+  const canWrite      = canEdit(userRole); // true for ADMIN + ENGINEER only
 
   const [project,      setProject]      = useState(null);
   const [milestones,   setMilestones]   = useState([]);
@@ -87,11 +88,12 @@ export default function ProjectOverview() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
 
-  const [showForm,    setShowForm]    = useState(false);
-  const [editing,     setEditing]     = useState(null);
-  const [formData,    setFormData]    = useState({ milestone_name:"", milestone_order:"", weight:"", planned_start_date:"", planned_completion_date:"" });
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError,   setFormError]   = useState(null);
+  const [showForm,       setShowForm]       = useState(false);
+  const [showNoPermMsg,  setShowNoPermMsg]  = useState(false); // ← for chairperson
+  const [editing,        setEditing]        = useState(null);
+  const [formData,       setFormData]       = useState({ milestone_name:"", milestone_order:"", weight:"", planned_start_date:"", planned_completion_date:"" });
+  const [formLoading,    setFormLoading]    = useState(false);
+  const [formError,      setFormError]      = useState(null);
 
   const load = async () => {
     try {
@@ -130,7 +132,14 @@ export default function ProjectOverview() {
   };
 
   const handleAddMilestone = () => {
+    // Chairperson — show message instead of form
+    if (!canWrite) {
+      setShowNoPermMsg(true);
+      setShowForm(false);
+      return;
+    }
     if (availableWeight() <= 0) { alert(t("overview.weight_full")); return; }
+    setShowNoPermMsg(false);
     setEditing(null);
     setFormData({ milestone_name:"", milestone_order: milestones.length + 1, weight:"", planned_start_date:"", planned_completion_date:"" });
     setShowForm(true);
@@ -149,6 +158,7 @@ export default function ProjectOverview() {
   };
 
   const handleToggle = async (m) => {
+    if (!canWrite) return; // chairperson cannot toggle
     setMilestones(prev => prev.map(ms => ms.id === m.id ? { ...ms, is_completed: !ms.is_completed } : ms));
     try {
       await api.patch(`milestones/milestone/${m.id}/`, { is_completed: !m.is_completed });
@@ -294,7 +304,8 @@ export default function ProjectOverview() {
           <div>
             <h3 className="font-semibold text-gray-900 tracking-tight">{t("project.progress")}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              {milestones.filter(m => m.is_completed).length} {t("overview.of")} {milestones.length} {t("project.milestones").toLowerCase()} {t("overview.completed_lower")} · {t("overview.click_checkbox")}
+              {milestones.filter(m => m.is_completed).length} {t("overview.of")} {milestones.length} {t("project.milestones").toLowerCase()} {t("overview.completed_lower")}
+              {canWrite && ` · ${t("overview.click_checkbox")}`}
             </p>
           </div>
           <div className="text-right">
@@ -315,11 +326,21 @@ export default function ProjectOverview() {
           <div className="space-y-2 border-t border-gray-100 pt-4">
             {[...milestones].sort((a, b) => a.milestone_order - b.milestone_order).map(m => (
               <div key={m.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${m.is_completed ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200 hover:border-blue-200"}`}>
-                <button type="button" onClick={() => handleToggle(m)}
-                  title={m.is_completed ? t("overview.mark_incomplete") : t("overview.mark_complete")}
-                  className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${m.is_completed ? "bg-green-500 border-green-500 hover:bg-green-600" : "border-gray-300 bg-white hover:border-blue-500"}`}>
-                  {m.is_completed && <CheckCircle2 className="w-4 h-4 text-white" />}
-                </button>
+
+                {/* Checkbox — only for admin/engineer */}
+                {canWrite ? (
+                  <button type="button" onClick={() => handleToggle(m)}
+                    title={m.is_completed ? t("overview.mark_incomplete") : t("overview.mark_complete")}
+                    className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${m.is_completed ? "bg-green-500 border-green-500 hover:bg-green-600" : "border-gray-300 bg-white hover:border-blue-500"}`}>
+                    {m.is_completed && <CheckCircle2 className="w-4 h-4 text-white" />}
+                  </button>
+                ) : (
+                  // Chairperson sees a static indicator
+                  <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center ${m.is_completed ? "bg-green-500 border-green-500" : "border-gray-300 bg-white"}`}>
+                    {m.is_completed && <CheckCircle2 className="w-4 h-4 text-white" />}
+                  </div>
+                )}
+
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">{m.milestone_order}</span>
                 <span className={`flex-1 text-sm font-medium ${m.is_completed ? "line-through text-gray-400" : "text-gray-800"}`}>{m.milestone_name}</span>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.is_completed ? "bg-green-100 text-green-700" : "bg-blue-50 text-blue-600"}`}>{parseFloat(m.weight).toFixed(1)}%</span>
@@ -328,10 +349,14 @@ export default function ProjectOverview() {
                     {t("overview.due")} {formatBSDate(m.planned_completion_date, lang)}
                   </span>
                 )}
-                <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={() => handleEditMilestone(m)} className="p-1 text-blue-500 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => handleDelete(m.id)}     className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
+
+                {/* Edit/Delete — only for admin/engineer */}
+                {canWrite && (
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button onClick={() => handleEditMilestone(m)} className="p-1 text-blue-500 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(m.id)}     className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -343,7 +368,7 @@ export default function ProjectOverview() {
             {totalWeight < 100  && <span className="text-orange-500 ml-1">({(100-totalWeight).toFixed(1)}% {t("overview.unassigned")})</span>}
             {totalWeight >= 100 && <span className="text-green-600 ml-1">✓</span>}
           </span>
-          {totalWeight < 100 && milestones.length > 0 && <span className="text-orange-500 italic text-xs">{t("overview.add_more_milestones")}</span>}
+          {totalWeight < 100 && milestones.length > 0 && canWrite && <span className="text-orange-500 italic text-xs">{t("overview.add_more_milestones")}</span>}
         </div>
       </div>
 
@@ -383,18 +408,37 @@ export default function ProjectOverview() {
             </InfoGrid>
           </Card>
 
-          {/* Add / Edit Milestone form */}
+          {/* Milestone Form Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2 tracking-tight">
                 <CheckCircle2 className="w-5 h-5 text-blue-600"/> {t("overview.add_edit_milestone")}
               </h3>
-              <button onClick={handleAddMilestone} disabled={totalWeight >= 100}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {/* Add button visible to everyone, but behaviour differs */}
+              <button
+                onClick={handleAddMilestone}
+                disabled={canWrite && totalWeight >= 100}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Plus className="w-4 h-4"/> {t("overview.add_milestone")}
               </button>
             </div>
-            {showForm ? (
+
+            {/* No permission message for chairperson */}
+            {showNoPermMsg && (
+              <div className="mx-6 mt-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Sorry, you cannot add milestones to this project.</p>
+                  <p className="text-xs text-amber-600 mt-0.5">Only Admins and Engineers can add or edit milestones.</p>
+                </div>
+                <button onClick={() => setShowNoPermMsg(false)} className="ml-auto text-amber-400 hover:text-amber-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {showForm && canWrite ? (
               <div className="p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h4 className="font-semibold text-gray-900 tracking-tight">{editing ? t("edit") : t("add")} {t("overview.milestone")}</h4>
@@ -425,8 +469,6 @@ export default function ProjectOverview() {
                         placeholder={`${t("overview.max")} ${avail.toFixed(1)}`}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
-
-                    {/* ── BS date pickers ── */}
                     <BSDatePicker
                       label={t("timeline.proposed")}
                       name="planned_start_date"
@@ -452,9 +494,14 @@ export default function ProjectOverview() {
                 </form>
               </div>
             ) : (
-              <div className="px-6 py-4 text-sm text-gray-400">
-                {totalWeight >= 100 ? t("overview.all_weight_assigned") : t("overview.weight_remaining", { pct: (100-totalWeight).toFixed(1) })}
-              </div>
+              !showNoPermMsg && (
+                <div className="px-6 py-4 text-sm text-gray-400">
+                  {canWrite
+                    ? (totalWeight >= 100 ? t("overview.all_weight_assigned") : t("overview.weight_remaining", { pct: (100-totalWeight).toFixed(1) }))
+                    : t("overview.view_only_mode")
+                  }
+                </div>
+              )
             )}
           </div>
         </div>

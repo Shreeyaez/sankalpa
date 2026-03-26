@@ -8,6 +8,8 @@ import {
   Shield,
 } from "lucide-react";
 import { projectsAPI, delayLogsAPI } from "../api/axios";
+import { useAuth } from "../context/AuthContext";
+import { canViewAudit, canViewOfficials, canEdit } from "../constants/userRoles.jsx";
 
 const OFFICIALS_ITEMS = [
   { to: "/app/engineers", icon: HardHat, labelKey: "nav.engineers" },
@@ -16,6 +18,7 @@ const OFFICIALS_ITEMS = [
 
 export default function Sidebar() {
   const { t } = useTranslation();
+  const { userRole, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [officialsOpen, setOfficialsOpen] = useState(false);
   const [missingDelayLogs, setMissingDelayLogs] = useState(0);
@@ -42,26 +45,25 @@ export default function Sidebar() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  // Build nav items based on role
   const NAV_ITEMS = [
     { to: "/app/dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
     { to: "/app/projects", icon: FolderKanban, labelKey: "nav.projects" },
     { to: "/app/contractors", icon: Briefcase, labelKey: "nav.contractors" },
-    { to: "/app/delay-logs", icon: Clock, labelKey: "nav.delay_logs", badge: missingDelayLogs },
+    ...(canEdit(userRole)
+    ? [{ to: "/app/delay-logs", icon: Clock, labelKey: "nav.delay_logs", badge: missingDelayLogs }]
+    : []),
     { to: "/app/past-records", icon: FileSpreadsheet, labelKey: "nav.past_records" },
-    { to: "/app/audit", icon: Shield, labelKey: "nav.audit_trail" },
+    // Audit Trail — ADMIN only
+    ...(canViewAudit(userRole)
+      ? [{ to: "/app/audit", icon: Shield, labelKey: "nav.audit_trail" }]
+      : []),
   ];
-
-  const handleLogout = async () => {
-    try {
-      const csrf = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || "";
-      await fetch("/api/auth/logout/", {
-        method: "POST",
-        credentials: "include",
-        headers: { "X-CSRFToken": csrf },
-      });
-    } catch (_) { }
-    navigate("/login");
-  };
 
   return (
     <aside className={`${collapsed ? "w-[68px]" : "w-60"} bg-[#062A4D] text-white flex flex-col transition-all duration-300 shrink-0`}>
@@ -95,7 +97,6 @@ export default function Sidebar() {
           </p>
         )}
 
-        {/* Main nav items */}
         {NAV_ITEMS.map(({ to, icon: Icon, labelKey, badge }) => (
           <NavLink
             key={to}
@@ -133,64 +134,66 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
-        {/* Officials dropdown */}
-        <div className="pt-1">
-          {!collapsed ? (
-            <>
-              <button
-                onClick={() => setOfficialsOpen(v => !v)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/8 hover:text-white transition-all duration-150"
-              >
-                <Users size={17} className="text-white/50 shrink-0" />
-                <span className="flex-1 text-left truncate">{t('nav.officials')}</span>
-                {officialsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
-              {officialsOpen && (
-                <div className="mt-0.5 ml-6 space-y-0.5 border-l border-white/10 pl-2">
-                  {OFFICIALS_ITEMS.map(({ to, icon: Icon, labelKey }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
-                        ${isActive
-                          ? "bg-white/15 text-white font-medium"
-                          : "text-white/60 hover:bg-white/8 hover:text-white"
-                        }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <Icon size={15} className={`shrink-0 ${isActive ? "text-blue-300" : "text-white/50"}`} />
-                          <span className="truncate">{t(labelKey)}</span>
-                        </>
-                      )}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            OFFICIALS_ITEMS.map(({ to, icon: Icon, labelKey }) => (
-              <NavLink
-                key={to}
-                to={to}
-                title={t(labelKey)}
-                className={({ isActive }) =>
-                  `flex items-center justify-center px-3 py-2.5 rounded-lg text-sm transition-all duration-150
-                  ${isActive ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/8 hover:text-white"}`
-                }
-              >
-                {({ isActive }) => (
-                  <Icon size={17} className={isActive ? "text-blue-300" : "text-white/50"} />
+        {/* Officials dropdown — hidden for ENGINEER and CHAIRPERSON */}
+        {canViewOfficials(userRole) && (
+          <div className="pt-1">
+            {!collapsed ? (
+              <>
+                <button
+                  onClick={() => setOfficialsOpen(v => !v)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/8 hover:text-white transition-all duration-150"
+                >
+                  <Users size={17} className="text-white/50 shrink-0" />
+                  <span className="flex-1 text-left truncate">{t('nav.officials')}</span>
+                  {officialsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+                {officialsOpen && (
+                  <div className="mt-0.5 ml-6 space-y-0.5 border-l border-white/10 pl-2">
+                    {OFFICIALS_ITEMS.map(({ to, icon: Icon, labelKey }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
+                          ${isActive
+                            ? "bg-white/15 text-white font-medium"
+                            : "text-white/60 hover:bg-white/8 hover:text-white"
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <Icon size={15} className={`shrink-0 ${isActive ? "text-blue-300" : "text-white/50"}`} />
+                            <span className="truncate">{t(labelKey)}</span>
+                          </>
+                        )}
+                      </NavLink>
+                    ))}
+                  </div>
                 )}
-              </NavLink>
-            ))
-          )}
-        </div>
+              </>
+            ) : (
+              OFFICIALS_ITEMS.map(({ to, icon: Icon, labelKey }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  title={t(labelKey)}
+                  className={({ isActive }) =>
+                    `flex items-center justify-center px-3 py-2.5 rounded-lg text-sm transition-all duration-150
+                    ${isActive ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/8 hover:text-white"}`
+                  }
+                >
+                  {({ isActive }) => (
+                    <Icon size={17} className={isActive ? "text-blue-300" : "text-white/50"} />
+                  )}
+                </NavLink>
+              ))
+            )}
+          </div>
+        )}
       </nav>
 
-      {/* BOTTOM — logout only */}
+      {/* BOTTOM — logout */}
       <div className="px-2 pb-4 border-t border-white/10 pt-3">
         <button
           onClick={handleLogout}
