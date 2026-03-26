@@ -34,7 +34,7 @@ class AuditLog(models.Model):
     )
 
     changed_by = models.ForeignKey(
-        Engineer,
+        'accounts.Account',
         on_delete=models.PROTECT,
         related_name="audit_logs"
     )
